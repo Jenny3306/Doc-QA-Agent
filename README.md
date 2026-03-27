@@ -1,4 +1,4 @@
-# Document Q&A Agent
+# NVIDIA Document Q&A Agent
 
 An intelligent document assistant powered by **NVIDIA Nemotron 3 Nano** and **LangGraph** that answers questions from any PDF with source citations, conversation memory, and honest fallback behavior.
 
@@ -6,19 +6,22 @@ An intelligent document assistant powered by **NVIDIA Nemotron 3 Nano** and **La
 ![NVIDIA NIM](https://img.shields.io/badge/NVIDIA-NIM-76B900)
 ![LangGraph](https://img.shields.io/badge/LangGraph-Agent-purple)
 ![ChromaDB](https://img.shields.io/badge/ChromaDB-Vector_DB-orange)
+![React](https://img.shields.io/badge/React-Frontend-61DAFB)
+![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688)
 
 ---
 
 ## Demo
 
 > Upload any PDF → ask questions → get cited, grounded answers
+
 ```
 You: What attention mechanism does Falcon use?
-Agent [RETRIEVE]: Falcon uses multigroup attention — an extension of 
+Agent [RETRIEVE]: Falcon uses multigroup attention — an extension of
 multiquery attention that improves inference scalability [Chunk 2].
 
 You: Summarize what you just told me
-Agent [META]: Falcon uses multigroup attention to reduce the K,V-cache 
+Agent [META]: Falcon uses multigroup attention to reduce the K,V-cache
 size during inference, making large model deployment more efficient.
 
 You: What is the stock price of Falcon?
@@ -28,28 +31,41 @@ Agent [RETRIEVE]: I could not find this in the document.
 ---
 
 ## Architecture
+
 ```
-User Question
-     │
-     ▼
-┌─────────────┐
-│   Router    │ ──── META ────► Conversation History
-│  (LangGraph)│ ──── CLARIFY ─► Ask for more detail  
-└─────────────┘ ──── RETRIEVE ─► ChromaDB Search
-                                      │
-                                      ▼
-                              NVIDIA NIM Embeddings
-                              (nv-embedqa-e5-v5)
-                                      │
-                                      ▼
-                              Top-5 Relevant Chunks
-                                      │
-                                      ▼
-                              Nemotron 3 Nano (30B)
-                              (nvidia/nemotron-3-nano-30b-a3b)
-                                      │
-                                      ▼
-                           Grounded Answer + Citation
+┌─────────────────────────────────────────────────────────────┐
+│                     React Frontend                          │
+│   Sidebar · Chat Panel · Evidence (Citations/Chunks/Trace)  │
+└───────────────────────┬─────────────────────────────────────┘
+                        │ REST API (axios)
+                        ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   FastAPI Backend                           │
+│              /upload  ·  /chat  ·  /status                  │
+└───────────────────────┬─────────────────────────────────────┘
+                        │
+                        ▼
+               User Question
+                        │
+                        ▼
+              ┌─────────────────┐
+              │     Router      │ ── META ────► Conversation History
+              │   (LangGraph)   │ ── CLARIFY ─► Ask for more detail
+              └─────────────────┘ ── RETRIEVE ─► ChromaDB Search
+                                                      │
+                                                      ▼
+                                          NVIDIA NIM Embeddings
+                                          (nv-embedqa-e5-v5)
+                                                      │
+                                                      ▼
+                                          Top-5 Relevant Chunks
+                                                      │
+                                                      ▼
+                                          Nemotron 3 Nano (30B)
+                                          (nvidia/nemotron-3-nano-30b-a3b)
+                                                      │
+                                                      ▼
+                                       Grounded Answer + Citation
 ```
 
 ---
@@ -61,7 +77,8 @@ User Question
 - **Conversation memory** — remembers context across multiple questions
 - **Source citations** — every answer references which chunk it came from
 - **Honest fallback** — refuses to hallucinate when information isn't in the document
-- **Web UI** — Streamlit interface with PDF upload and real-time chat
+- **Evidence panel** — shows Citations, raw Chunks, and Agent Trace in real time
+- **React + FastAPI** — production-grade frontend/backend separation
 
 ---
 
@@ -99,29 +116,44 @@ Tested chunk sizes of 300, 500, and 800 tokens:
 | Agent framework | LangGraph |
 | PDF processing | PyMuPDF (fitz) |
 | Text splitting | LangChain RecursiveCharacterTextSplitter |
-| Web UI | Streamlit |
+| Backend API | FastAPI + Uvicorn |
+| Frontend | React + Vite |
 
 ---
 
 ## Project Structure
+
 ```
 nvidia-doc-agent/
-├── app.py                  # Streamlit web UI
-├── agent_state.py          # LangGraph state definition
-├── agent_nodes.py          # Agent decision nodes (Router, Retriever, Generator, Meta, Clarifier)
-├── langgraph_agent.py      # Terminal agent interface
-├── rag_chain.py            # Core RAG pipeline
-├── rag_chat.py             # Interactive terminal chat
-├── embed_and_store.py      # PDF ingestion + ChromaDB storage
-├── evaluator.py            # Automated evaluation (6/6 100%)
-├── retrieval_benchmark.py  # Retrieval strategy comparison
-├── chunk_optimizer.py      # Chunk size optimization
-├── quality_scorer.py       # Nemotron-as-judge quality scoring
-├── pdf_loader.py           # PDF text extraction
-├── text_chunker.py         # Text chunking
-├── hello_nemotron.py       # Week 1: first API call
-├── chat_loop.py            # Week 1: conversation memory
-└── doc_agent.py            # Week 1: document persona
+│
+├── backend/                        # FastAPI backend
+│   ├── main.py                     # REST API endpoints (/upload, /chat, /status)
+│   ├── agent_state.py              # LangGraph state definition
+│   ├── agent_nodes.py              # Agent nodes (Router, Retriever, Generator, Meta, Clarifier)
+│   ├── langgraph_agent.py          # Terminal agent interface
+│   ├── rag_chain.py                # Core RAG pipeline
+│   ├── rag_chat.py                 # Interactive terminal chat
+│   ├── embed_and_store.py          # PDF ingestion + ChromaDB storage
+│   ├── evaluator.py                # Automated evaluation (6/6 100%)
+│   ├── retrieval_benchmark.py      # Retrieval strategy comparison
+│   ├── chunk_optimizer.py          # Chunk size optimization
+│   ├── quality_scorer.py           # Nemotron-as-judge quality scoring
+│   ├── pdf_loader.py               # PDF text extraction
+│   ├── text_chunker.py             # Text chunking
+│   ├── hello_nemotron.py           # Week 1: first API call
+│   ├── chat_loop.py                # Week 1: conversation memory
+│   ├── doc_agent.py                # Week 1: document persona
+│   └── .env                        # NVIDIA API key (not committed)
+│
+├── frontend/                       # React frontend
+│   ├── src/
+│   │   ├── App.jsx                 # Main app — Sidebar, ChatPanel, EvidencePanel
+│   │   ├── main.jsx                # React entry point
+│   │   └── index.css               # Global styles
+│   ├── index.html
+│   └── package.json
+│
+└── README.md
 ```
 
 ---
@@ -129,44 +161,58 @@ nvidia-doc-agent/
 ## How to Run
 
 ### 1. Clone the repo
+
 ```bash
 git clone https://github.com/Jenny3306/Doc-QA-Agent.git
 cd Doc-QA-Agent
 ```
 
-### 2. Set up environment
+### 2. Set up Python environment
+
 ```bash
 python -m venv venv
-source venv/bin/activate  # Mac/Linux
-venv\Scripts\activate     # Windows
+source venv/bin/activate    # Mac/Linux
+venv\Scripts\activate       # Windows
 
+pip install fastapi uvicorn python-multipart
 pip install openai langchain-nvidia-ai-endpoints langchain-text-splitters
-pip install pymupdf chromadb langchain-chroma langgraph streamlit python-dotenv
+pip install pymupdf chromadb langchain-chroma langgraph python-dotenv
 ```
 
 ### 3. Add your NVIDIA API key
 
-Create a `.env` file:
+Create a `.env` file inside the `backend/` folder:
+
 ```
 NVIDIA_API_KEY=nvapi-your-key-here
 ```
 
 Get your free API key at [build.nvidia.com](https://build.nvidia.com/nvidia/nemotron-3-nano-30b-a3b)
 
-### 4. Ingest a PDF
+### 4. Set up React frontend
+
 ```bash
-python embed_and_store.py
+cd frontend
+npm install
 ```
 
-### 5. Launch the web UI
+### 5. Run the backend
+
 ```bash
-streamlit run app.py
+cd backend
+uvicorn main:app --reload --port 8000
 ```
 
-Or use the terminal agent:
+### 6. Run the frontend
+
+Open a second terminal:
+
 ```bash
-python langgraph_agent.py
+cd frontend
+npm run dev
 ```
+
+Open your browser at **http://localhost:5173**
 
 ---
 
@@ -193,6 +239,20 @@ Retrieving 5 chunks ensures coverage of facts that may be spread across the docu
 **Why honest fallback?**
 Production AI systems must know what they don't know. The agent explicitly refuses to answer questions not found in the document rather than hallucinating — verified with 3/3 out-of-scope test cases.
 
+**Why React + FastAPI instead of Streamlit?**
+Streamlit is great for prototyping but has significant UI limitations. Separating frontend (React) from backend (FastAPI) enables a production-grade interface with an Evidence panel (Citations/Chunks/Trace), proper chat bubbles, and full design control — matching the kind of UI seen in real AI products.
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | Health check |
+| GET | `/status` | Check if document is loaded |
+| POST | `/upload` | Upload and index a PDF |
+| POST | `/chat` | Send a question, get a grounded answer |
+
 ---
 
 ## Built With
@@ -200,12 +260,13 @@ Production AI systems must know what they don't know. The agent explicitly refus
 - [NVIDIA NIM](https://build.nvidia.com) — inference microservices
 - [LangGraph](https://langchain-ai.github.io/langgraph/) — agent orchestration
 - [ChromaDB](https://www.trychroma.com) — vector database
-- [Streamlit](https://streamlit.io) — web interface
+- [FastAPI](https://fastapi.tiangolo.com) — backend API
+- [React + Vite](https://vitejs.dev) — frontend
 
 ---
 
 ## Author
 
-Built by Lê Như Nhã Uyên ([@Jenny3306](https://github.com/Jenny3306)) as a portfolio project, inspired by the NVIDIA Nemotron models for language understanding and generation.
+Built by Lê Như Nhã Uyên ([@Jenny3306](https://github.com/Jenny3306)) as a portfolio project for NVIDIA internship applications.
 
 *Second-year Computer Science student passionate about LLMs, RAG systems, and AI infrastructure.*
