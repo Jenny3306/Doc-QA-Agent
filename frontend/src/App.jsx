@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import axios from "axios"
 import { SpeedInsights } from "@vercel/speed-insights/react"
 
-const API = "http://localhost:8000"
+const API = import.meta.env.VITE_API_URL || "http://localhost:8000"
 const GRN = "#76B900"
 
 // ── Badge component ───────────────────────────────────────────
