@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import axios from "axios"
+import { SpeedInsights } from "@vercel/speed-insights/react"
 
 const API = "http://localhost:8000"
 const GRN = "#76B900"
@@ -682,6 +683,7 @@ export default function App() {
       <ChatPanel messages={messages} onSend={handleSend} docInfo={docInfo}
                  onBackHome={handleBackHome} />
       <EvidencePanel chunks={chunks} confidence={confidence} trace={trace} />
+      <SpeedInsights />
     </div>
   )
 }
